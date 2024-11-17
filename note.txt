@@ -1,0 +1,5 @@
+1. Add all folder that dont needed in .gitignore
+2. delete /lib and push to github/gitlab
+3. close and relaunch
+4. login to VM and install pip using python3
+5. install requirements.txt using pip

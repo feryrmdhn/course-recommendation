@@ -1,4 +1,4 @@
-#!/Users/fery/Documents/Project/Sagemaker/eduqat-rs/bin/python3.12
+#!/Users/fery/Documents/Project/Sagemaker/eduqat-rs/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
