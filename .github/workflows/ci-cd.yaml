@@ -44,7 +44,10 @@ jobs:
       - name: Log in to AWS ECR (Elastic Container Registry)
         uses: aws-actions/amazon-ecr-login@v2
         with:
-          region: ${{ secrets.AWS_REGION }}
+          registry-type: private
+          skip-logout: false
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Push Docker image to AWS ECR
         run: |
