@@ -80,8 +80,12 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/fastapi_key.pem
           chmod 600 ~/.ssh/fastapi_key.pem
-          
-          ssh -i ~/.ssh/fastapi_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << EOF
+
+          # Automatically add EC2 instance's SSH key to known hosts
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
+
+          # SSH to EC2 and deploy the application
+          ssh -T -i ~/.ssh/fastapi_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << EOF
             # Pull Docker image from ECR
             docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
             # Stop and remove previous container if it exists
