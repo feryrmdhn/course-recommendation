@@ -55,8 +55,8 @@ jobs:
         run: |
           # Create repository if doesn't exist
           aws ecr create-repository --repository-name fastapi-app || true
-          docker tag fastapi-app:latest <aws_account_id>.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
-          docker push <aws_account_id>.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
+          docker tag fastapi-app:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
 
   deploy:
     needs: build
@@ -70,10 +70,10 @@ jobs:
           
           ssh -i ~/.ssh/fastapi_key.pem ubuntu@<ec2-public-ip> << EOF
             # Pull Docker image from ECR
-            docker pull <aws_account_id>.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
             # Stop and remove previous container if it exists
             docker stop fastapi-container || true
             docker rm fastapi-container || true
             # Run new Docker container
-            docker run -d --name fastapi-container -p 8000:8000 <aws_account_id>.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
+            docker run -d --name fastapi-container -p 8000:8000 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
           EOF
