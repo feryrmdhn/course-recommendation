@@ -51,7 +51,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-     - name: Create ECR repository if it doesn't exist
+      - name: Create ECR repository if it doesn't exist
         run: |
           aws ecr describe-repositories --repository-names fastapi-app || aws ecr create-repository --repository-name fastapi-app
         env:
@@ -81,12 +81,12 @@ jobs:
           echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/fastapi_key.pem
           chmod 600 ~/.ssh/fastapi_key.pem
           
-          ssh -i ~/.ssh/fastapi_key.pem ubuntu@<ec2-public-ip> << EOF
+          ssh -i ~/.ssh/fastapi_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << EOF
             # Pull Docker image from ECR
-            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
             # Stop and remove previous container if it exists
             docker stop fastapi-container || true
             docker rm fastapi-container || true
             # Run new Docker container
-            docker run -d --name fastapi-container -p 8000:8000 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-southeast-1.amazonaws.com/fastapi-app:latest
+            docker run -d --name fastapi-container -p 8000:8000 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
           EOF
