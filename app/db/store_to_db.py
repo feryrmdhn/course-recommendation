@@ -10,7 +10,7 @@ db_config = {
         'user': os.getenv("DB_USERNAME"),
         'password': os.getenv("DB_MASTER_PASSWORD"),
         'port': os.getenv("DB_PORT"),
-        'dbname': 'db_courses' # adjust with the other case
+        'dbname': 'db_courses'
     }
 
 connection_string = f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
