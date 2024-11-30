@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import boto3
 import json
 from typing import List, Optional
 import os
+from app.utils.utils import validate_api_key
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,47 +34,62 @@ class CourseData(BaseModel):
 class APIResponse(BaseModel):
     status: int
     message: str
+    total: int
     data: List[CourseData]
 
-@router.post("/recommendation", response_model=APIResponse)
-async def get_recommendations(request: CourseRequest):
+@router.post("/v1/recommendation", response_model=APIResponse)
+async def course_recommendations(request: CourseRequest, api_key: str = Depends(validate_api_key)):
+    cursor = None
+
     try:
         input_data = {
-            "course_name": request.course_name,
+            "text": request.course_name,
             "school_id": request.school_id,
             "top_n": request.top_n
         }
-        
-        # Invoke SageMaker endpoint
+
+        json_input_data = json.dumps(input_data)
+
         response = sagemaker_runtime.invoke_endpoint(
             EndpointName=endpoint_name, 
             ContentType='application/json',
-            Body=json.dumps(input_data)
+            Accept='application/json',
+            Body=json_input_data
         )
         
-        # Parse response
-        response_body = json.loads(response['Body'].read())
+        # Read and parse the response
+        response_body = response['Body'].read().decode('utf-8')
         
-        # Check if response is an error message
-        if isinstance(response_body, str):
-            raise HTTPException(status_code=400, detail=response_body)
+        if not response_body:
+            raise HTTPException(status_code=500, detail="Empty response from model.")
         
-        # Format response data
+        try:
+            response_json = json.loads(response_body)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=500, detail="Failed to decode response body.")
+        
+        # Handle potential error response
+        if isinstance(response_json, dict) and 'error' in response_json:
+            raise HTTPException(status_code=400, detail=response_json['error'])
+        
         formatted_data = [
             CourseData(
-                course_name=course['course_name'],
+                course_name=course['name'],
                 categories=course['categories'].split(',') if isinstance(course['categories'], str) else [],
                 school_id=request.school_id,
-                similarity=round(float(course['similarity']), 4)
+                similarity=round(float(course['similarity']), 2)
             )
-            for course in response_body
+            for course in response_json
         ]
         
         return {
             "status": 200,
             "message": "Success",
+            "total": len(formatted_data),
             "data": formatted_data
         }
     
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
