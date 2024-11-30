@@ -71,40 +71,40 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
- deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to AWS EC2
-        run: |
-          # Install AWS CLI and Docker on EC2 instance
-          sudo apt update -y
-          sudo apt install -y awscli docker.io
-
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/fastapi_key.pem
-          chmod 600 ~/.ssh/fastapi_key.pem
-
-          # Automatically add EC2 instance's SSH key to known hosts
-          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
-
-          # SSH to EC2 and deploy the application
-          ssh -T -i ~/.ssh/fastapi_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << EOF
-            # Install AWS CLI on EC2 if not installed
+  deploy:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - name: Deploy to AWS EC2
+          run: |
+            # Install AWS CLI and Docker on EC2 instance
             sudo apt update -y
-            sudo apt install -y awscli
+            sudo apt install -y awscli docker.io
 
-            # Authenticate Docker with ECR
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+            mkdir -p ~/.ssh
+            echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/fastapi_key.pem
+            chmod 600 ~/.ssh/fastapi_key.pem
 
-            # Pull Docker image from ECR
-            sudo docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
-            
-            # Stop and remove previous container if it exists
-            sudo docker stop fastapi-container || true
-            sudo docker rm fastapi-container || true
+            # Automatically add EC2 instance's SSH key to known hosts
+            ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
 
-            # Run new Docker container
-            sudo docker run -d --name fastapi-container -p 8000:8000 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
-          EOF
+            # SSH to EC2 and deploy the application
+            ssh -T -i ~/.ssh/fastapi_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << EOF
+              # Install AWS CLI on EC2 if not installed
+              sudo apt update -y
+              sudo apt install -y awscli
+
+              # Authenticate Docker with ECR
+              aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+              # Pull Docker image from ECR
+              sudo docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
+              
+              # Stop and remove previous container if it exists
+              sudo docker stop fastapi-container || true
+              sudo docker rm fastapi-container || true
+
+              # Run new Docker container
+              sudo docker run -d --name fastapi-container -p 8000:8000 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
+            EOF
 
