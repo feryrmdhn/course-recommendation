@@ -87,10 +87,10 @@ jobs:
           # SSH to EC2 and deploy the application
           ssh -T -i ~/.ssh/fastapi_key.pem ubuntu@${{ secrets.EC2_PUBLIC_IP }} << EOF
             # Pull Docker image from ECR
-            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
+            sudo docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
             # Stop and remove previous container if it exists
-            docker stop fastapi-container || true
-            docker rm fastapi-container || true
+            sudo docker stop fastapi-container || true
+            sudo docker rm fastapi-container || true
             # Run new Docker container
-            docker run -d --name fastapi-container -p 8000:8000 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
+            sudo docker run -d --name fastapi-container -p 8000:8000 ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fastapi-app:latest
           EOF
