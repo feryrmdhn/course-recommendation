@@ -91,69 +91,28 @@ jobs:
           ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
 
           # Deploy script with improved error handling and logging
-          ssh -v -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP << 'EOF'
-            # Debugging Docker login
-            aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-            
-            # Update package lists and install core dependencies
-            sudo apt-get update -y
-            sudo apt-get install -y \
-              ca-certificates \
-              curl \
-              gnupg \
-              lsb-release \
-              software-properties-common
+          ssh -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP << 'EOF'
+          # Update untuk Amazon Linux
+          sudo yum update -y
+          sudo yum install -y docker aws-cli
 
-            # Remove existing Docker packages to prevent conflicts
-            sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
+          # Start Docker
+          sudo systemctl start docker
+          sudo systemctl enable docker
 
-            # Add Docker's official GPG key
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+          # Add user to docker group
+          sudo usermod -aG docker ec2-user
 
-            # Set up Docker repository
-            echo \
-              "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-              $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          # Login ECR dengan parameter region yang jelas
+          aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-            # Install Docker and AWS CLI
-            sudo apt-get update -y
-            sudo apt-get install -y \
-              docker-ce \
-              docker-ce-cli \
-              containerd.io \
-              docker-compose-plugin \
-              awscli
+          # Pull image
+          sudo docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
 
-            # Ensure Docker service is running
-            sudo systemctl start docker
-            sudo systemctl enable docker
-
-            # Add ubuntu user to docker group to avoid sudo for docker commands
-            sudo usermod -aG docker ubuntu
-
-            # Authenticate Docker with ECR
-            aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-
-            # Pull Docker image from ECR
-            sudo docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
-            
-            # Stop and remove previous container if it exists
-            sudo docker stop fastapi-container || true
-            sudo docker rm fastapi-container || true
-
-            # Run new Docker container with additional logging and restart policy
-            sudo docker run -d \
-              --restart unless-stopped \
-              --name fastapi-container \
-              -p 8000:8000 \
-              --log-driver json-file \
-              --log-opt max-size=10m \
-              --log-opt max-file=3 \
-              $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
-
-            # Fetch logs from the running container for debug purposes
-            sudo docker logs fastapi-container
-
-            # Optional: Prune old Docker images to save disk space
-            sudo docker image prune -f
-          EOF
+          # Jalankan container
+          sudo docker run -d \
+            --restart unless-stopped \
+            --name fastapi-container \
+            -p 8000:8000 \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
+        EOF
