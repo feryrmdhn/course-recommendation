@@ -87,33 +87,33 @@ jobs:
           aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws configure set default.region $AWS_REGION
 
-          # SSH dengan mode bash
-          ssh -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP bash << 'EOSSH'
-            # Export environment variables
-            export AWS_REGION=$AWS_REGION
-            export AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
+          # Prepare SSH
+          mkdir -p ~/.ssh
+          echo "$AWS_SSH_KEY" > ~/.ssh/fastapi_key.pem
+          chmod 600 ~/.ssh/fastapi_key.pem
 
-            # Debug AWS Configuration
-            aws configure list
-            
-            # Login ECR dengan cara eksplisit
-            aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+          # Add EC2 instance to known hosts
+          ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
 
-            # Pull image
-            docker pull "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest"
+          # Deploy script with improved error handling and logging
+          ssh -v -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP << 'EOF'
+              # Export environment variables
+              export AWS_REGION=$AWS_REGION
+              export AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
 
-            # Run container
-            docker run -d \
-              --restart unless-stopped \
-              --name fastapi-container \
-              -p 8000:8000 \
-              "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest"
-          EOSSH
+              # Debug AWS Configuration
+              aws configure list
+              
+              # Login ECR dengan cara eksplisit
+              aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
-      - name: Verify Deployment
-        run: |
-          ssh -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP bash << 'EOSSH'
-            docker images
-            docker ps
-            aws ecr describe-repositories
-          EOSSH
+              # Pull image
+              docker pull "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest"
+
+              # Run container
+              docker run -d \
+                --restart unless-stopped \
+                --name fastapi-container \
+                -p 8000:8000 \
+                "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest"
+            EOSSH
