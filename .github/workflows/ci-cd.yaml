@@ -91,28 +91,28 @@ jobs:
           ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
 
           # Deploy script with improved error handling and logging
-          ssh -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP << 'EOF'
-          # Update untuk Amazon Linux
-          sudo yum update -y
-          sudo yum install -y docker aws-cli
+          ssh -v -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP << 'EOF'
+              # Update untuk Amazon Linux
+              sudo yum update -y
+              sudo yum install -y docker aws-cli
 
-          # Start Docker
-          sudo systemctl start docker
-          sudo systemctl enable docker
+              # Start Docker
+              sudo systemctl start docker
+              sudo systemctl enable docker
 
-          # Add user to docker group
-          sudo usermod -aG docker ec2-user
+              # Add user to docker group
+              sudo usermod -aG docker ec2-user
 
-          # Login ECR dengan parameter region yang jelas
-          aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+              # Login ECR dengan parameter region yang jelas
+              aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-          # Pull image
-          sudo docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
+              # Pull image
+              sudo docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
 
-          # Jalankan container
-          sudo docker run -d \
-            --restart unless-stopped \
-            --name fastapi-container \
-            -p 8000:8000 \
-            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
-        EOF
+              # Jalankan container
+              sudo docker run -d \
+                --restart unless-stopped \
+                --name fastapi-container \
+                -p 8000:8000 \
+                $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
+            EOF
