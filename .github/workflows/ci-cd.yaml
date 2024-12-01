@@ -82,37 +82,38 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
-          # Prepare SSH
-          mkdir -p ~/.ssh
-          echo "$AWS_SSH_KEY" > ~/.ssh/fastapi_key.pem
-          chmod 600 ~/.ssh/fastapi_key.pem
+          # Set AWS Credentials di runner
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set default.region $AWS_REGION
 
-          # Add EC2 instance to known hosts
-          ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
+          # SSH dengan mode bash
+          ssh -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP bash << 'EOSSH'
+            # Export environment variables
+            export AWS_REGION=$AWS_REGION
+            export AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
 
-          # Deploy script with improved error handling and logging
-          ssh -v -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP << 'EOF'
-              # Update untuk Amazon Linux
-              sudo yum update -y
-              sudo yum install -y docker aws-cli
+            # Debug AWS Configuration
+            aws configure list
+            
+            # Login ECR dengan cara eksplisit
+            aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
-              # Start Docker
-              sudo systemctl start docker
-              sudo systemctl enable docker
+            # Pull image
+            docker pull "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest"
 
-              # Add user to docker group
-              sudo usermod -aG docker ec2-user
+            # Run container
+            docker run -d \
+              --restart unless-stopped \
+              --name fastapi-container \
+              -p 8000:8000 \
+              "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest"
+          EOSSH
 
-              # Login ECR dengan parameter region yang jelas
-              aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-
-              # Pull image
-              sudo docker pull $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
-
-              # Jalankan container
-              sudo docker run -d \
-                --restart unless-stopped \
-                --name fastapi-container \
-                -p 8000:8000 \
-                $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest
-            EOF
+      - name: Verify Deployment
+        run: |
+          ssh -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP bash << 'EOSSH'
+            docker images
+            docker ps
+            aws ecr describe-repositories
+          EOSSH
