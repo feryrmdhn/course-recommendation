@@ -113,7 +113,7 @@ jobs:
               # Run container
               docker run -d \
                 --restart unless-stopped \
-                --name fastapi-container \
+                --name fastapi-cont \
                 -p 8000:8000 \
                 "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/fastapi-app:latest"
             EOSSH
