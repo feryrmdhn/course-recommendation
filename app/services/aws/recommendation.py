@@ -75,7 +75,7 @@ async def course_recommendations(request: CourseRequest, api_key: str = Depends(
         formatted_data = [
             CourseData(
                 course_name=course['name'],
-                categories=course['categories'].split(',') if isinstance(course['categories'], str) else [],
+                categories=[category.strip() for category in course['categories'].split(',')] if isinstance(course['categories'], str) else [],
                 school_id=request.school_id,
                 similarity=round(float(course['similarity']), 2)
             )
