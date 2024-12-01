@@ -92,6 +92,9 @@ jobs:
 
           # Deploy script with improved error handling and logging
           ssh -v -i ~/.ssh/fastapi_key.pem ec2-user@$EC2_PUBLIC_IP << 'EOF'
+            # Debugging Docker login
+            aws ecr get-login-password --region $AWS_REGION | sudo docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+            
             # Update package lists and install core dependencies
             sudo apt-get update -y
             sudo apt-get install -y \
