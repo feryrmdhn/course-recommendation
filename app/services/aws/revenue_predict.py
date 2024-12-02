@@ -23,7 +23,6 @@ endpoint_name = os.getenv("ENDPOINT_NAME_REVENUE")
 
 @router.get("/v1/revenue_predict", tags=["Revenue"], description="Predict total revenue based on average data from the last 3 months.")
 async def predict_revenue(api_key: str = Depends(validate_api_key)):
-    
     cursor = None
 
     def predict_model(input_data):
