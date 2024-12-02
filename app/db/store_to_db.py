@@ -16,13 +16,13 @@ db_config = {
 connection_string = f"postgresql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
 
 # Store Data default to DB
-df = pd.read_csv('./app/assets/data_courses.csv')
+df = pd.read_csv('./app/assets/data_revenue.csv')
 
 # Connect to PostgreSQL
 engine = create_engine(connection_string)
 
 # Save data to PostgreSQL
-df.to_sql('courses', engine, if_exists='replace', index=False)
+df.to_sql('revenue', engine, if_exists='replace', index=False)
 
 # Run python store_to_db.py in active venv terminal
 # ========================================= #

@@ -37,8 +37,8 @@ class APIResponse(BaseModel):
     total: int
     data: List[CourseData]
 
-@router.post("/v1/recommendation", response_model=APIResponse)
-async def course_recommendations(request: CourseRequest, api_key: str = Depends(validate_api_key)):
+@router.post("/v1/recommendation", response_model=APIResponse, tags=["Courses"], description="Course recommendations based on the selected course. Minimum total recommendations 10 for efficiency.")
+async def courses_recommendation(request: CourseRequest, api_key: str = Depends(validate_api_key)):
     cursor = None
 
     try:

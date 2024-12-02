@@ -4,7 +4,7 @@ from app.db.conn import postgreSQL_connection
 
 router = APIRouter()
 
-@router.get("/v1/courses")
+@router.get("/v1/courses", tags=["Courses"], description="Get random course data with a total of 50 courses from 300 courses.")
 async def get_data_courses(api_key: str = Depends(validate_api_key)):
     cursor = None
 
